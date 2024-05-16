@@ -9,10 +9,19 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
 	"slices"
+	"strings"
 	"time"
 
 	"golang.org/x/net/proxy"
+)
+
+var (
+	_, b, _, _ = runtime.Caller(0)
+	basepath   = filepath.Dir(b)
 )
 
 type Header map[string]string
@@ -37,6 +46,40 @@ type Fetcher struct {
 	ProxyUsername string
 	ProxyPassword string
 	Verbose       bool
+}
+
+func InitFetchers() *[]Fetcher {
+	data, err := os.ReadFile(filepath.Join(basepath, "/proxies.txt"))
+
+	if err != nil {
+		log.Fatal("Failed to read proxies file")
+	}
+
+	lines := strings.Split(string(data), "\n")
+	num_proxies := len(lines)
+
+	if lines[num_proxies-1] == "" {
+		num_proxies -= 1
+	}
+
+	fetchers := make([]Fetcher, num_proxies)
+
+	for index, line := range lines[:num_proxies] {
+		args := strings.Split(string(line), ":")
+
+		if len(args) != 4 {
+			log.Fatal("Fail to parse proxies file line")
+		}
+
+		fetchers[index] = Fetcher{
+			ProxyUrl:      args[0] + ":" + args[1],
+			ProxyUsername: args[2],
+			ProxyPassword: args[3],
+			Verbose:       false,
+		}
+	}
+
+	return &fetchers
 }
 
 func (f Fetcher) FetchData(fp FetcherParams) []byte {
