@@ -11,17 +11,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strings"
 	"time"
 
 	"golang.org/x/net/proxy"
-)
-
-var (
-	_, b, _, _ = runtime.Caller(0)
-	basepath   = filepath.Dir(b)
 )
 
 type Header map[string]string
@@ -48,7 +42,7 @@ type Fetcher struct {
 	Verbose       bool
 }
 
-func InitFetchers() *[]Fetcher {
+func InitFetchers(basepath string) *[]Fetcher {
 	data, err := os.ReadFile(filepath.Join(basepath, "/proxies.txt"))
 
 	if err != nil {
