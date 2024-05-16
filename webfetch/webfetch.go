@@ -52,6 +52,8 @@ func InitFetchers() *[]Fetcher {
 	data, err := os.ReadFile(filepath.Join(basepath, "/proxies.txt"))
 
 	if err != nil {
+		log.Printf("From %s", basepath)
+		log.Printf("%v", err)
 		log.Fatal("Failed to read proxies file")
 	}
 
