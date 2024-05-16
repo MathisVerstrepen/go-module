@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"time"
 
 	"golang.org/x/net/proxy"
 )
@@ -32,14 +33,21 @@ type FetcherClient interface {
 }
 
 type Fetcher struct {
-	ProxyUrl string
+	ProxyUrl      string
+	ProxyUsername string
+	ProxyPassword string
+	Verbose       bool
 }
 
 func (f Fetcher) FetchData(fp FetcherParams) []byte {
 	client := &http.Client{}
 
 	if fp.UseProxy {
-		dialer, err := proxy.SOCKS5("tcp", f.ProxyUrl, nil, proxy.Direct)
+		auth := proxy.Auth{User: f.ProxyUsername, Password: f.ProxyPassword}
+		dialer, err := proxy.SOCKS5("tcp", f.ProxyUrl, &auth, &net.Dialer{
+			Timeout:   60 * time.Second,
+			KeepAlive: 30 * time.Second,
+		})
 		if err != nil {
 			log.Fatalf("Failed to initialize proxy.\nErr : %s", err)
 		}
