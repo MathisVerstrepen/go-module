@@ -29,11 +29,11 @@ func isNodeMatchingSelector(node *html.Node, selector *HtmlSelector) bool {
 		for _, attr := range node.Attr {
 			switch attr.Key {
 			case "id":
-				if attr.Val == selector.Id {
+				if selector.Id != "" && attr.Val == selector.Id {
 					return true
 				}
 			case "class":
-				if strings.Contains(attr.Val, selector.ClassNames) {
+				if selector.ClassNames != "" && strings.Contains(attr.Val, selector.ClassNames) {
 					return true
 				}
 			}
