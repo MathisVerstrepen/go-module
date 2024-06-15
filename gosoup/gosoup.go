@@ -13,6 +13,7 @@ type HtmlSelector struct {
 	ClassNames string
 	Id         string
 	Tag        string
+	OnlyTag    bool
 	Multiple   bool
 }
 
@@ -26,6 +27,10 @@ func PrintNode(n *html.Node) {
 func isNodeMatchingSelector(node *html.Node, selector *HtmlSelector) bool {
 	if node.Type == html.ElementNode &&
 		(selector.Tag == "" || node.Data == selector.Tag) {
+		if selector.OnlyTag {
+			return true
+		}
+
 		for _, attr := range node.Attr {
 			switch attr.Key {
 			case "id":
@@ -53,7 +58,7 @@ func GetAttribute(parentNode *html.Node, attribute string) string {
 
 // Using a recursive solution, this method search for a HTML node matching
 // the HTML selectors values (ClassNames, Id, Tag)
-func GetNodeByClass(parentNode *html.Node, selector *HtmlSelector) []*html.Node {
+func GetNodeBySelector(parentNode *html.Node, selector *HtmlSelector) []*html.Node {
 	var returnNode []*html.Node
 
 	var crawler func(*html.Node)
