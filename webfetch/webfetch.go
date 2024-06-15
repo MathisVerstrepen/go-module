@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -78,7 +79,7 @@ func InitFetchers(basepath string) *[]Fetcher {
 	return &fetchers
 }
 
-func (f Fetcher) FetchData(fp FetcherParams) []byte {
+func (f Fetcher) FetchData(fp FetcherParams) ([]byte, error) {
 	client := &http.Client{}
 
 	if fp.UseProxy {
@@ -88,7 +89,7 @@ func (f Fetcher) FetchData(fp FetcherParams) []byte {
 			KeepAlive: 30 * time.Second,
 		})
 		if err != nil {
-			log.Fatalf("Failed to initialize proxy.\nErr : %s", err)
+			return nil, fmt.Errorf("failed to initialize proxy.\nErr : %s", err)
 		}
 
 		dialContext := func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -101,7 +102,7 @@ func (f Fetcher) FetchData(fp FetcherParams) []byte {
 
 	baseUrl, err := url.Parse(fp.Url)
 	if err != nil {
-		log.Fatalf("Failed to parse url.\nErr : %s", err)
+		return nil, fmt.Errorf("failed to parse url.\nErr : %s", err)
 	}
 
 	params := url.Values{}
@@ -114,14 +115,14 @@ func (f Fetcher) FetchData(fp FetcherParams) []byte {
 	if fp.Body != nil {
 		jsonBytes, err := json.Marshal(fp.Body)
 		if err != nil {
-			log.Fatalf("Failed to encode req body in bytes.\nErr : %s", err)
+			return nil, fmt.Errorf("failed to encode req body in bytes.\nErr : %s", err)
 		}
 		bodyBuffer = bytes.NewBuffer(jsonBytes)
 	}
 
 	req, err := http.NewRequest(fp.Method, baseUrl.String(), bodyBuffer)
 	if err != nil {
-		log.Fatalf("Failed to initialize request.\nErr : %s", err)
+		return nil, fmt.Errorf("failed to initialize request.\nErr : %s", err)
 	}
 
 	for headerKey, headerValue := range fp.Headers {
@@ -130,20 +131,20 @@ func (f Fetcher) FetchData(fp FetcherParams) []byte {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Failed to make request.\nErr : %s", err)
+		return nil, fmt.Errorf("failed to make request.\nErr : %s", err)
 	}
 
 	if fp.WantErrCodes == nil && resp.StatusCode != 200 {
-		log.Fatalf("Got status code %d instead of wanted 200\nUrl : %s", resp.StatusCode, fp.Url)
+		return nil, fmt.Errorf("got status code %d instead of wanted 200\nUrl : %s", resp.StatusCode, fp.Url)
 	} else if fp.WantErrCodes != nil && !slices.Contains(fp.WantErrCodes, resp.StatusCode) {
-		log.Fatalf("Got status code %d instead of wanted %d\nUrl : %s", resp.StatusCode, fp.WantErrCodes, fp.Url)
+		return nil, fmt.Errorf("got status code %d instead of wanted %d\nUrl : %s", resp.StatusCode, fp.WantErrCodes, fp.Url)
 	}
 
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Failed to read body from request response.\nErr : %s", err)
+		return nil, fmt.Errorf("failed to read body from request response.\nErr : %s", err)
 	}
 
-	return body
+	return body, nil
 }
