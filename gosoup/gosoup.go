@@ -56,6 +56,21 @@ func GetAttribute(parentNode *html.Node, attribute string) string {
 	return ""
 }
 
+func GetInnerText(n *html.Node) string {
+	if n == nil {
+		return ""
+	}
+	var text string
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		if c.Type == html.TextNode {
+			text += c.Data
+		} else if c.Type == html.ElementNode {
+			text += GetInnerText(c)
+		}
+	}
+	return strings.TrimSpace(text)
+}
+
 // Using a recursive solution, this method search for a HTML node matching
 // the HTML selectors values (ClassNames, Id, Tag)
 func GetNodeBySelector(parentNode *html.Node, selector *HtmlSelector) []*html.Node {
