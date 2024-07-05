@@ -79,7 +79,7 @@ func InitFetchers(basepath string) *[]Fetcher {
 	return &fetchers
 }
 
-func (f Fetcher) FetchData(fp FetcherParams) ([]byte, error) {
+func reqWrapper(f Fetcher, fp FetcherParams) (*http.Response, error) {
 	client := &http.Client{}
 
 	if fp.UseProxy {
@@ -134,11 +134,22 @@ func (f Fetcher) FetchData(fp FetcherParams) ([]byte, error) {
 		return nil, fmt.Errorf("failed to make request.\nErr : %s", err)
 	}
 
+	return resp, err
+}
+
+func (f Fetcher) FetchData(fp FetcherParams) ([]byte, error) {
+	resp, err := reqWrapper(f, fp)
+	if err != nil {
+		return nil, err
+	}
+
 	if fp.WantErrCodes == nil && resp.StatusCode != 200 {
 		return nil, fmt.Errorf("got status code %d instead of wanted 200\nUrl : %s", resp.StatusCode, fp.Url)
 	} else if fp.WantErrCodes != nil && !slices.Contains(fp.WantErrCodes, resp.StatusCode) {
 		return nil, fmt.Errorf("got status code %d instead of wanted %d\nUrl : %s", resp.StatusCode, fp.WantErrCodes, fp.Url)
 	}
+
+	resp.Cookies()
 
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
@@ -147,4 +158,27 @@ func (f Fetcher) FetchData(fp FetcherParams) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+func (f Fetcher) FetchDataAndCookies(fp FetcherParams) ([]byte, []*http.Cookie, error) {
+	resp, err := reqWrapper(f, fp)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if fp.WantErrCodes == nil && resp.StatusCode != 200 {
+		return nil, nil, fmt.Errorf("got status code %d instead of wanted 200\nUrl : %s", resp.StatusCode, fp.Url)
+	} else if fp.WantErrCodes != nil && !slices.Contains(fp.WantErrCodes, resp.StatusCode) {
+		return nil, nil, fmt.Errorf("got status code %d instead of wanted %d\nUrl : %s", resp.StatusCode, fp.WantErrCodes, fp.Url)
+	}
+
+	cookies := resp.Cookies()
+
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read body from request response.\nErr : %s", err)
+	}
+
+	return body, cookies, nil
 }
