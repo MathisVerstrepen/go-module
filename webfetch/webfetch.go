@@ -111,13 +111,20 @@ func reqWrapper(f Fetcher, fp FetcherParams) (*http.Response, error) {
 	}
 	baseUrl.RawQuery = params.Encode()
 
-	var bodyBuffer *bytes.Buffer = &bytes.Buffer{}
-	if fp.Body != nil {
-		jsonBytes, err := json.Marshal(fp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to encode req body in bytes.\nErr : %s", err)
+	var bodyBuffer io.Reader
+	if fp.Body == nil {
+		bodyBuffer = &bytes.Buffer{}
+	} else {
+		switch v := fp.Body.(type) {
+		case string:
+			bodyBuffer = strings.NewReader(v)
+		default:
+			jsonBytes, err := json.Marshal(fp.Body)
+			if err != nil {
+				return nil, fmt.Errorf("failed to encode req body in bytes.\nErr : %s", err)
+			}
+			bodyBuffer = bytes.NewBuffer(jsonBytes)
 		}
-		bodyBuffer = bytes.NewBuffer(jsonBytes)
 	}
 
 	req, err := http.NewRequest(fp.Method, baseUrl.String(), bodyBuffer)
