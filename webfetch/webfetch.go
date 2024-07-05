@@ -182,3 +182,26 @@ func (f Fetcher) FetchDataAndCookies(fp FetcherParams) ([]byte, []*http.Cookie, 
 
 	return body, cookies, nil
 }
+
+func (f Fetcher) FetchDataAndHeaders(fp FetcherParams) ([]byte, http.Header, error) {
+	resp, err := reqWrapper(f, fp)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if fp.WantErrCodes == nil && resp.StatusCode != 200 {
+		return nil, nil, fmt.Errorf("got status code %d instead of wanted 200\nUrl : %s", resp.StatusCode, fp.Url)
+	} else if fp.WantErrCodes != nil && !slices.Contains(fp.WantErrCodes, resp.StatusCode) {
+		return nil, nil, fmt.Errorf("got status code %d instead of wanted %d\nUrl : %s", resp.StatusCode, fp.WantErrCodes, fp.Url)
+	}
+
+	headers := resp.Header
+
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read body from request response.\nErr : %s", err)
+	}
+
+	return body, headers, nil
+}
