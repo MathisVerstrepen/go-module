@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/html"
 	"golang.org/x/net/proxy"
 )
 
@@ -32,8 +33,15 @@ type FetcherParams struct {
 	WantErrCodes []int
 }
 
+type HTMLBytes []byte
+
+func (htmlb HTMLBytes) ToHTMLNode() (*html.Node, error) {
+	htmlNode, err := html.Parse(strings.NewReader(string(htmlb)))
+	return htmlNode, err
+}
+
 type FetcherClient interface {
-	FetchData(fp FetcherParams) []byte
+	FetchData(fp FetcherParams) HTMLBytes
 }
 
 type Fetcher struct {
@@ -144,7 +152,7 @@ func reqWrapper(f Fetcher, fp FetcherParams) (*http.Response, error) {
 	return resp, err
 }
 
-func (f Fetcher) FetchData(fp FetcherParams) ([]byte, error) {
+func (f Fetcher) FetchData(fp FetcherParams) (HTMLBytes, error) {
 	resp, err := reqWrapper(f, fp)
 	if err != nil {
 		return nil, err
@@ -167,7 +175,7 @@ func (f Fetcher) FetchData(fp FetcherParams) ([]byte, error) {
 	return body, nil
 }
 
-func (f Fetcher) FetchDataAndCookies(fp FetcherParams) ([]byte, []*http.Cookie, error) {
+func (f Fetcher) FetchDataAndCookies(fp FetcherParams) (HTMLBytes, []*http.Cookie, error) {
 	resp, err := reqWrapper(f, fp)
 	if err != nil {
 		return nil, nil, err
@@ -190,7 +198,7 @@ func (f Fetcher) FetchDataAndCookies(fp FetcherParams) ([]byte, []*http.Cookie, 
 	return body, cookies, nil
 }
 
-func (f Fetcher) FetchDataAndHeaders(fp FetcherParams) ([]byte, http.Header, error) {
+func (f Fetcher) FetchDataAndHeaders(fp FetcherParams) (HTMLBytes, http.Header, error) {
 	resp, err := reqWrapper(f, fp)
 	if err != nil {
 		return nil, nil, err
