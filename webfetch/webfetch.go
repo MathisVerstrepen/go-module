@@ -126,6 +126,8 @@ func reqWrapper(f Fetcher, fp FetcherParams) (*http.Response, error) {
 		switch v := fp.Body.(type) {
 		case string:
 			bodyBuffer = strings.NewReader(v)
+		case *bytes.Buffer:
+			bodyBuffer = v
 		default:
 			jsonBytes, err := json.Marshal(fp.Body)
 			if err != nil {
